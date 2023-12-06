@@ -1,0 +1,6 @@
+패키지 매니저
+
+yum(centos, redhat)
+sudo apt update(ubuntu, debian) - repository(저장소)
+sudo apt install -y openssh-server
+sudo apt-get update(ubuntu, debian)

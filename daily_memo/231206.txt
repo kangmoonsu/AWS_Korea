@@ -1,0 +1,20 @@
+실행 순서
+1. db서버
+2. web 서버
+3. MobaXTerm
+
+drawio.com
+
+NIC = Network Interface Card
+
+firewall
+구성도
+Architecture
+네트워크 구성도
+Topology
+ifconfig.io
+NIC (LAN Card, WLAN Card)
+Network Interface Card
+firewall
+centos (firewalld)
+ubuntu (ufw)

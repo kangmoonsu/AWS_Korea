@@ -1,0 +1,48 @@
+MobaXterm
+
+yum install -y httpd
+systemctl start httpd
+systemctl status httpd
+
+systemctl status firewalld
+
+systemctl enable httpd
+
+firewall-cmd --permanent --add-service=http
+
+ssh root@172.16.9.45
+
+public = pub
+private = pvt
+
+0~65535 TCP, UDP
+well-knowen port 0~1023(TCP 22(ssh), 80(http), 444(https))
+unknowen port 1024~65535(TCP 3306(mysql))
+
+포트포워드(PAT: Port Address Translation)
+---------------------------------------------
+vbox
+vm(centos7-web)
+1.cpu : 1C (6C)
+2.ram : 1G (12G)
+3.ssd : 128G
+4.net : ip(pub, pvt)
+5.img : os(centos7 mini)
+6.sec : ssh keypair(pub, pvt)
+
+vmware
+vm(ubuntu16-db)
+1.cpu : 1C (6C)
+2.ram : 1G (12G)
+3.ssd : 128G
+4.net : ip(pub, pvt)
+5.img : os(ubuntu16 server)
+6.sec : ssh keypair(pub, pvt)
+
+vm(esxi)
+1.cpu : 6C (6C)
+2.ram : 12G (12G) - 12288 mb
+3.ssd : 128G (동적 할당)
+4.net : ip(pub, pvt)
+5.img : os(Vmvisor*.iso)
+6.sec : ssh keypair(pub, pvt)
