@@ -45,4 +45,4 @@ vm(esxi)
 3.ssd : 128G (동적 할당)
 4.net : ip(pub, pvt)
 5.img : os(Vmvisor*.iso)
-6.sec : ssh keypair(pub, pvt)
+6.sec : ssh keypair(pub, pvt) - RSA 방식 : 비대칭 키 관리 방식, Public Key

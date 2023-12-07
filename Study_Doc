@@ -110,53 +110,58 @@ PasswordAuthentication no
 172.16.0.0 ~ 172.31.255.255
 192.168.0.0 ~ 192.168.255.255
 
-강의실 네트워크
-Public Subnet
-192.168.0.0/24
-192.168.0.0 ~ 192.168.0.255 (256개 IP - 2개 = 254개)
-192.168.0.0   네트워크 주소(시작 IP)
-192.168.0.255 브로드캐스팅 주소(마지막 IP)
+나의 네트워크(VMware Pro NAT)
+Public Subnet(EXT) - 외부
+172.25.0.0/24
+172.25.0.0 ~ 192.168.0.255 (256개 IP - 2개 = 254개)
+172.25.0.0   네트워크 주소(시작 IP)
+172.25.0.255 브로드캐스팅 주소(마지막 IP)
 
-Private Subnet
-172.16.0.0/24
-172.16.0.0 ~ 172.16.0.255 (256개 IP - 2개 = 254개)
-172.16.0.0   네트워크 주소(시작 IP)
-172.16.0.255 브로드캐스팅 주소(마지막 IP)
+- Router
+
+Private Subnet(INT) - 내부 - 격리 네트워크 - isolated network - 정보자산 DBMS 위치하려고 구축
+10.25.0.0/24
+10.25.0.0 ~ 172.16.0.255 (256개 IP - 2개 = 254개)
+10.25.0.0   네트워크 주소(시작 IP)
+10.25.0.255 브로드캐스팅 주소(마지막 IP)
 
 # hostnamectl set-hostname router
+# vi /etc/hosts
+172.25.0.130 router
 
-# vi /etc/sysconfig/network-scripts/ifcfg-enp0s3
+# dG vi편집기 전체 삭제 명령어
+# vi /etc/sysconfig/network-scripts/ifcfg-ens192
 TYPE=Ethernet
 BOOTPROTO=none
-NAME=enp0s3
-DEVICE=enp0s3
+NAME=ens192
+DEVICE=ens192
 ONBOOT=yes
-IPADDR=192.168.0.85
+IPADDR=172.25.0.131
 NETMASK=255.255.255.0
-GATEWAY=192.168.0.1
+GATEWAY=172.25.0.2
 DNS1=8.8.8.8
 DNS2=8.8.4.4
 
-# vi /etc/sysconfig/network-scripts/ifcfg-enp0s8
+# vi /etc/sysconfig/network-scripts/ifcfg-ens224
 TYPE=Ethernet
 BOOTPROTO=none
-NAME=enp0s8
-DEVICE=enp0s8
+NAME=ens224
+DEVICE=ens224
 ONBOOT=yes
-IPADDR=172.31.0.1
+IPADDR=10.25.0.1
 NETMASK=255.255.255.0
 
 # systemctl restart network
 # firewall-cmd --get-active-zone
 public
-  interfaces: enp0s3 enp0s8
-# nmcli c mod enp0s3 connection.zone external
-# nmcli c mod enp0s8 connection.zone internal
+  interfaces: ens192 ens224
+# nmcli c mod ens192 connection.zone external // nm : network manager
+# nmcli c mod ens224 connection.zone internal
 # firewall-cmd --get-active-zone
 internal
-  interfaces: enp0s8
+  interfaces: ens224
 external
-  interfaces: enp0s3
+  interfaces: ens192
 
 # sysctl -w net.ipv4.ip_forward=1 # 리눅스 시스템을 라우터로 만드는 셋팅
 # sysctl -p # 설정 저장
@@ -165,7 +170,7 @@ external
 
 * 포트포워딩은 공인 IP 주소로부터 들어오는 웹 트래픽을 내부에 있는 서버로 전달하려면 포트 포워딩을 설정해야 합니다. 웹 서버는 일반적으로 80번 포트를 사용하므로, 공유기 또는 방화벽 설정에서 80번 포트로 들어오는 트래픽을 웹 서버가 있는 내부 IP 주소로 전달하도록 설정할 수 있습니다.
 
-# firewall-cmd --permanent --zone=external --add-forward-port=port=139:proto=tcp:toport=139:toaddr=172.31.0.101
+# firewall-cmd --permanent --zone=external --add-forward-port=port=8080:proto=tcp:toport=80:toaddr=10.25.0.100
 # firewall-cmd --permanent --zone=external --add-forward-port=port=445:proto=tcp:toport=445:toaddr=172.31.0.101
 # firewall-cmd --reload
 # firewall-cmd --list-all --zone=external
@@ -175,12 +180,12 @@ external
 # yum install dhcp -y
 # vi /etc/dhcp/dhcpd.conf
 ddns-update-style interim;
-subnet 172.16.0.0 netmask 255.255.255.0 {
-# = 172.16.0.0/24
-option routers 172.16.0.1;
+subnet 10.25.0.0 netmask 255.255.255.0 {
+# = 10.25.0.0/24
+option routers 10.25.0.1;
 option subnet-mask 255.255.255.0;
-range dynamic-bootp 172.16.0.100 172.16.0.110;
-option domain-name-servers 172.16.0.102, 8.8.8.8, 8.8.4.4;
+range dynamic-bootp 10.25.0.100 10.25.0.110;
+option domain-name-servers 8.8.8.8, 8.8.4.4;
 default-lease-time 7200;
 max-lease-time 86400;
 }
