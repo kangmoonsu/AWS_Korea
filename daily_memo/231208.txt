@@ -1,0 +1,4 @@
+1. esxi router를 먼저 켜야함
+
+
+gabia domain purchase

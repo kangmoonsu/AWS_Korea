@@ -94,8 +94,14 @@ SELINUX=disabled
 * SSHD(Secure Shell Daemon; KeyPair 생성 및 활용) : 키 쌍은 특정 인증 프로토콜에 사용되는 공개(Public) 키(자물쇠-서버) 및 프라이빗(Private; *.pem) 키(열쇠-개인 폴더) 파일을 나타냅니다.
 SSH 공개 키 인증은 비동기 암호화 알고리즘을 사용하여 "프라이빗" 키와 "공개" 키라는 두 가지 키 파일을 생성합니다. 프라이빗 키 파일은 암호와 동일하며, 모든 상황에서 보호되어야 합니다. 다른 사람이 사용자의 프라이빗 키를 획득하면 사용자가 액세스할 수 있는 모든 SSH 서버에 사용자의 이름으로 로그인할 수 있습니다.
 
+scp two-rabbit.jpg root@172.25.0.131:/root/
+
+scp -i .ssh/id_rsa two-rabbit.jpg root@172.25.0.131:/root/
+
+scp -i .ssh/id_rsa aws.tar root@172.25.0.131:/tmp/
+
 # ssh-keygen -t rsa
-# ssh-copy-id -i .ssh/id_rsa root@192.168.0.42
+# ssh-copy-id -i .ssh/id_rsa root@172.25.0.131
 # ssh root@192.168.0.42
 # vi /etc/ssh/sshd_config
 PasswordAuthentication no
@@ -171,8 +177,11 @@ external
 * 포트포워딩은 공인 IP 주소로부터 들어오는 웹 트래픽을 내부에 있는 서버로 전달하려면 포트 포워딩을 설정해야 합니다. 웹 서버는 일반적으로 80번 포트를 사용하므로, 공유기 또는 방화벽 설정에서 80번 포트로 들어오는 트래픽을 웹 서버가 있는 내부 IP 주소로 전달하도록 설정할 수 있습니다.
 
 # firewall-cmd --permanent --zone=external --add-forward-port=port=8080:proto=tcp:toport=80:toaddr=10.25.0.100
-# firewall-cmd --permanent --zone=external --add-forward-port=port=445:proto=tcp:toport=445:toaddr=172.31.0.101
 # firewall-cmd --reload
+
+# firewall-cmd --permanent --zone=external --add-forward-port=port=2200:proto=tcp:toport=22:toaddr=10.25.0.100
+# firewall-cmd --reload
+
 # firewall-cmd --list-all --zone=external
 
 * 동적 호스트 구성 프로토콜(Dynamic Host Configuration Protocol, DHCP)은 호스트 IP 구성 관리를 단순화하는 IP 표준입니다. 동적 호스트 구성 프로토콜 표준에서는 DHCP 서버를 사용하여 IP 주소 및 관련된 기타 구성 세부 정보를 네트워크의 DHCP 사용 클라이언트에게 동적으로 할당하는 방법을 제공합니다.
@@ -198,9 +207,11 @@ max-lease-time 86400;
 
 # yum -y install bind bind-chroot bind-utils
 ggdG
+
 # vi /etc/named.conf
+
 options {
-        listen-on port 53 { 127.0.0.1; 192.168.0/24; 172.16.0/24; };
+        listen-on port 53 { 127.0.0.1; 10.25.0/24; 172.25.0/24; };
         listen-on-v6 port 53 { ::1; };
         directory       "/var/named";
         dump-file       "/var/named/data/cache_dump.db";
@@ -208,7 +219,7 @@ options {
         memstatistics-file "/var/named/data/named_mem_stats.txt";
         recursing-file  "/var/named/data/named.recursing";
         secroots-file   "/var/named/data/named.secroots";
-        allow-query     { localhost; 192.168.0/24; 172.16.0/24; };
+        allow-query     { localhost; 10.25.0/24; 172.25.0/24; };
         forwarders { 8.8.8.8; 8.8.4.4; };
 
         recursion yes;
@@ -238,51 +249,55 @@ view "internal" {
         };
 
         include "/etc/named.rfc1912.zones";
-        include "/var/named/johnlee.shop.zones"; # 호스팅 영역 생성
+        include "/var/named/devplace.shop.zones"; # 호스팅 영역 생성
 };
 
-# vi /var/named/johnlee.shop.zones
-zone "johnlee.shop" IN {
+# vi /var/named/devplace.shop.zones
+zone "devplace.shop" IN {
         type master;
-        file "johnlee.shop.db";
+        file "devplace.shop.db";
         allow-update { none; };
 };
 
-zone "0.31.172.in-addr.arpa" IN {
+zone "0.25.10.in-addr.arpa" IN {
         type master;
-        file "0.31.172.in-addr.arpa.db";
+        file "0.25.10.in-addr.arpa.db";
         allow-update { none; };
 };
 
-# vi /var/named/johnlee.shop.db
+# vi /var/named/devplace.shop.db
 $TTL    86400
-@       IN      SOA     johnlee.shop.   root.johnlee.shop.(
+@       IN      SOA     devplace.shop.   root.devplace.shop.(
                         2022041401 ; Serial
                         3h         ; Refresh
                         1h         ; Retry
                         1w         ; Expire
                         1h )       ; Minimum
 
-        IN      NS      ns.johnlee.shop.
-        IN      MX 10   ns.johnlee.shop.
-ns      IN      A       172.16.0.102
-web01   IN      A       172.16.0.100
-web02   IN      A       172.16.0.101
+        IN      NS      ns.devplace.shop.
+        IN      MX 10   ns.devplace.shop.
+ns      IN      A       10.25.0.101
+web1    IN      A       10.25.0.100
 
-# vi /var/named/0.31.172.in-addr.arpa.db
+
+# vi /var/named/0.25.10.in-addr.arpa.db
 $TTL	86400
-@	IN	SOA	johnlee.shop.	root.johnlee.shop.(
+@	IN	SOA	devplace.shop.	root.devplace.shop.(
 			2022041401 ; Serial
 			3h         ; Refresh
 			1h         ; Retry
 			1w         ; Expire
                         1h )       ; Minimum
 
-	IN	NS	ns.johnlee.shop.
-102	IN	PTR	ns.johnlee.shop.
+	IN	NS	ns.devplace.shop.
+101	IN	PTR	ns.devplace.shop.
 
 # systemctl start named && systemctl enable named
+
 # systemctl enable --now named
+
+systemctl disable --now httpd
+
 
 # firewall-cmd --permanent --add-service=dns
 # firewall-cmd --reload
@@ -292,20 +307,20 @@ $TTL	86400
 * 대표적인 레코드
 SOA  : 다루는 도메인 버전과 업데이트 시간 간격 등의 정보를 저장하는 레코드
 A    : 호스트 이름으로 IPv4 주소를 조회할 때 사용하는 레코드
-       예: 호스트 ns.johnlee.shop의 IPv4 주소는 172.16.0.130
+       예: 호스트 ns.devplace.shop의 IPv4 주소는 172.16.0.130
 AAAA : 호스트 이름으로 IPv6 주소를 조회할 때 사용하는 레코드
        예: jprs.jp의 IPv6 주소는 2001:218:3001:7::80
 PTR  : IP 주소로 호스트 이름을 조회할 때 사용하는 레코드
-       예: 172.16.0.130의 호스트 이름은 ns.johnlee.shop
+       예: 172.16.0.130의 호스트 이름은 ns.devplace.shop
 NS   : DNS 서버의 호스트 이름 혹은 IP 주소를 저장하는 레코드
-       예: johnlee.shop의 DNS 서버는 ns.johnlee.shop
+       예: devplace.shop의 DNS 서버는 ns.devplace.shop
 MX   : 메일 서버 호스트 이름 혹은 IP 주소를 저장하는 레코드
-       예: johnlee.shop의 메일 서버는 mail.johnlee.shop
+       예: devplace.shop의 메일 서버는 mail.devplace.shop
 CNAME: 호스트 이름의 별칭을 저장하는 레코드
-       예: www.johnlee.shop은 ns.johnlee.shop의 별칭(alias)
+       예: www.devplace.shop은 ns.devplace.shop의 별칭(alias)
 
 # yum install -y bind-utils
-dig A web01.johnlee.shop
+dig A web01.devplace.shop
 dig -x 172.16.0.102
 
 * HAProxy는 여러 서버에 요청을 분산시키는 TCP 및 HTTP 기반 애플리케이션을 위한 고가용성 로드 밸런서 및 역방향 프록시를 제공하는 무료 오픈 소스 소프트웨어 입니다. C로 작성되었으며 빠르고 효율적(프로세서 및 메모리 사용 측면에서)으로 유명합니다.
