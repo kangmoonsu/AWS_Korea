@@ -1,0 +1,3 @@
+db dns 복습
+
+trouble shooting again

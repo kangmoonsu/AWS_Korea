@@ -1,0 +1,21 @@
+키는 순서
+1. 라우터
+2. db dns
+3. web
+
+ISP(Internet Service Provider): KT, SKB, LGU+, Dreamline
+CSP(Cloud       "      "    ): AWS, Azure, GCP, Alibaba
+NSO(Managed     "      "    ): GS 네오텍, MZC, Bespin Global
+
+AWS
+2019 server base (GUI-DeskTop)
+2019 server base core (CLI)
+
+SNAT(Source) : pvt ip -> pub ip (VM 기준)
+DNAT(Destination) : pvt ip <- pub ip(VM 기준)
+
+Static NAT : pvt ip : pub ip (1 : 1 mapping) 1:1 NAT
+Dynamic NAT : 다수의 pvt ip : 다수의 pub ip(n:n mapping) n:n NAT
+              다수의 pvt ip : pub ip(n:1 mapping) n:1 NAT
+
+Port Forward : NAT 테이블을 활용, NAT의 하나의 기능이다.

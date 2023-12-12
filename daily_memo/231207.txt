@@ -1,3 +1,2 @@
 id_rsa = 열쇠
 id_rsa.pub = 자물쇠
-
