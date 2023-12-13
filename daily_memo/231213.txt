@@ -1,0 +1,3 @@
+LAN (Local Area Network) : Star 형 내부망
+WLAN (Wireless Local Area Network) : 강의실
+WAN(Wide Area Network) : 건물 외부망

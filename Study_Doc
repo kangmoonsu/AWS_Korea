@@ -328,7 +328,14 @@ CNAME: 호스트 이름의 별칭을 저장하는 레코드
 dig A web01.devplace.shop
 dig -x 172.16.0.102
 
-* HAProxy는 여러 서버에 요청을 분산시키는 TCP 및 HTTP 기반 애플리케이션을 위한 고가용성 로드 밸런서 및 역방향 프록시를 제공하는 무료 오픈 소스 소프트웨어 입니다. C로 작성되었으며 빠르고 효율적(프로세서 및 메모리 사용 측면에서)으로 유명합니다.
+High Availability(고가용성이 있다는 것은 최소 2대 이상 서버가 존재해야 합니다.) - 정보보안 3대 요소 - 기밀성, 무결성, 가용성
+* HAProxy와 AWS ELB 유사
+* HAProxy 여러 서버에 요청을 분산시키는 TCP(L4) 및 HTTP(L7) 기반 애플리케이션을 위한 고가용성 로드 밸런서 및 역방향 프록시를 제공하는 무료 오픈 소스 소프트웨어 입니다. C로 작성되었으며 빠르고 효율적(프로세서 및 메모리 사용 측면에서)으로 유명합니다.
+
+GSLB(Global Server Load Balancer) - WAN 인터넷망
+SLB(Server Load Balancer) - HAProxy LAN 내부망
+
+# yum install -y haproxy
 
 # vi /etc/haproxy/haproxy.cfg
 global
@@ -343,9 +350,9 @@ frontend  http-in
 
 backend backend_servers
     balance            roundrobin
-    server             web01 172.16.0.101:80 cookie w1 check
-    server             web02 172.16.0.100:80 cookie w2 check
-    server             web03 172.16.0.103:80 cookie w3 check
+    server             web1 web1.devplace.shop:80 cookie w1 check
+    server             web2 web2.devplace.shop:80 cookie w2 check
+    server             web3 web3.devplace.shop:80 cookie w3 check
 
 # systemctl start haproxy
 # systemctl enable haproxy
@@ -424,15 +431,20 @@ smb: \> get aws.tar
 web2.devplace.shop:/share /root/share nfs defaults 0 0 # 자동 마운트 설정
 
 * DBMS(데이터베이스 관리 시스템)은 데이터베이스를 정의하고 생성하며 데이터를 저장, 검색, 업데이트 및 관리하는 소프트웨어 시스템입니다. 이는 데이터베이스를 효과적으로 구성하고 조직하여 데이터에 대한 효율적인 액세스를 제공하고, 데이터의 무결성과 보안을 유지하는 데 도움이 됩니다.
+Oracle SQL, MySQL, MariaDB, Postgre SQL(표준 SQL을 이용하는 관계형 데이터베이스 관리 시스템 RDBMS) // NoSQL(MongoDB, DynamoDB, ETCD; KVS[Key Value Store])
 
 > 서버
-repo = repository
+repo = repository(directory 유사)의 상위 개념은 registry(저장소)
 # vi /etc/yum.repos.d/MariaDB.repo
 [mariadb]
 name = MariaDB
 baseurl = http://yum.mariadb.org/10.4/centos7-amd64
 gpgkey=https://yum.mariadb.org/RPM-GPG-KEY-MariaDB
 gpgcheck=1
+
+yum, apt, pkg ... 패키지 매니저
+
+TCP 3306 mysql, mariadb 기본 포트
 
 # yum install -y MariaDB
 # rpm -qa | grep MariaDB
@@ -443,7 +455,7 @@ gpgcheck=1
 # mysql_secure_installation
 # systemctl restart mariadb
 # mysql -u root -p
-CREATE USER 'wpuser'@'%' IDENTIFIED BY 'wppass';
+CREATE USER 'wpuser'@'%' IDENTIFIED BY '1234';
 CREATE DATABASE IF NOT EXISTS wordpress;
 GRANT ALL PRIVILEGES ON wordpress.* TO 'wpuser'@'%';
 quit
@@ -453,7 +465,8 @@ quit
 
 > 클라이언트
 # yum install mysql -y
-# mysql -h 192.168.56.120 -u wpuser -p
+# mysql -h ns.devplace.shop -u wpuser -p
+1234
 
 * FTP(파일 전송 프로토콜)는 컴퓨터 네트워크를 통해 파일을 전송하기 위한 표준 프로토콜 중 하나입니다. FTP는 클라이언트-서버 모델을 기반으로 하며, 클라이언트는 파일을 업로드하거나 다운로드하기 위해 서버에 접속합니다.
 
@@ -492,30 +505,35 @@ Security.AccountLockFailures
 - 가상 스토리지 설치
 * iSCSI는 "Internet Small Computer System Interface"의 약자로, 컴퓨터와 저장 장치 간의 데이터 전송을 위한 표준화된 프로토콜입니다. iSCSI는 TCP/IP 네트워크를 통해 SCSI 명령을 전송하여 원격 저장 장치에 액세스하는 데 사용됩니다. 이는 기존의 Fibre Channel과 같은 전통적인 스토리지 네트워킹 기술보다 비용이 적게 드는 대안으로 사용됩니다.
 
-> ISCSI 스토리지(iscsitarget)
+> ISCSI 스토리지(iscsitarget) - 서버
 $ sudo apt update
 $ sudo apt install iscsitarget iscsitarget-dkms -y
-$ sudo vi /etc/default/iscsitarget
+$ sudo vi /etc/default/iscsitarget  #수정파일
 ISCSITARGET_ENABLE=true
 
 $ mkdir ~/storage
 $ dd if=/dev/zero of=~/storage/lun20_01.img bs=4096 count=5000000
 $ dd if=/dev/zero of=~/storage/lun20_02.img bs=4096 count=5000000
 
+lun(logical unint number)
+bs(block size)
+
 $ sudo vi /etc/iet/ietd.conf
-Target iqn.2023.12.org.cccr.sys01
-    Lun 1 Path=/home/johnlee/storage/lun20_01.img
+
+Target iqn.2023.12.org.sesac.sys01
+    Lun 1 Path=/home/moon/storage/lun20_01.img
     Alias LUN20_01
-Target iqn.2023.12.org.cccr.sys02
-    Lun 2 Path=/home/johnlee/storage/lun20_02.img
+Target iqn.2023.12.org.sesac.sys02
+    Lun 2 Path=/home/moon/storage/lun20_02.img
     Alias LUN20_02
+
 $ sudo systemctl restart iscsitarget
 
 > ISCSI 스토리지 접속 테스트
 $ sudo apt install open-iscsi -y
 $ sudo iscsiadm -m discovery -t st -p 127.0.0.1
-$ sudo iscsiadm -m node --targetname "iqn.2023.12.org.cccr.sys01" --portal "127.0.0.1:3260" --login
-$ sudo iscsiadm -m node --targetname "iqn.2023.12.org.cccr.sys01" --portal "127.0.0.1:3260" --logout
+$ sudo iscsiadm -m node --targetname "iqn.2023.12.org.sesac.sys01" --portal "172.25.0.128:3260" --login
+$ sudo iscsiadm -m node --targetname "iqn.2023.12.org.sesac.sys01" --portal "172.25.0.128:3260" --logout
 
 * 네트워크 파일 시스템(Network File System, NFS)은 1984년에 썬 마이크로시스템즈가 개발한 프로토콜입니다. 클라이언트 컴퓨터의 사용자가 네트워크 상의 파일을 직접 연결된 스토리지에 접근하는 방식과 비슷한 방식으로 접근하도록 도와 줍니다. 다른 수많은 프로토콜과 마찬가지로 ONC RPC 시스템을 기반으로 합니다. 네트워크 파일 시스템은 RFC에 정의된 오픈 표준이므로 누구나 구현할 수 있습니다.(윈도우10 접속 가능)
 
@@ -546,6 +564,6 @@ $ sudo iscsiadm -m node --targetname "iqn.2023.12.org.cccr.sys01" --portal "127.
 # mount -t nfs 172.16.0.100:/share /mnt
 # df -h
 # vi /etc/fstab
-192.168.56.120:/share /root/share nfs defaults 0 0
-
+10.25.0.102:/share /root/share nfs defaults 0 0
+// web2 의 ip주소
 - vCenter+vSAN

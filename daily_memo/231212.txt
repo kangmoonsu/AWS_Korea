@@ -19,3 +19,6 @@ Dynamic NAT : 다수의 pvt ip : 다수의 pub ip(n:n mapping) n:n NAT
               다수의 pvt ip : pub ip(n:1 mapping) n:1 NAT
 
 Port Forward : NAT 테이블을 활용, NAT의 하나의 기능이다.
+
+종료 순서
+라우터 마지막
