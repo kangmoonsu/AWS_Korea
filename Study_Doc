@@ -136,17 +136,18 @@ Private Subnet(INT) - 내부 - 격리 네트워크 - isolated network - 정보�
 172.25.0.130 router
 
 # dG vi편집기 전체 삭제 명령어
-# vi /etc/sysconfig/network-scripts/ifcfg-ens192
+# vi /etc/sysconfig/network-scripts/ifcfg-ens32
 TYPE=Ethernet
 BOOTPROTO=none
-NAME=ens192
-DEVICE=ens192
+NAME=ens32
+DEVICE=ens32
 ONBOOT=yes
-IPADDR=172.25.0.131
+IPADDR=10.25.0.104
 NETMASK=255.255.255.0
-GATEWAY=172.25.0.2
-DNS1=8.8.8.8
-DNS2=8.8.4.4
+GATEWAY=10.25.0.1
+DNS1=10.25.0.102
+DNS2=8.8.8.8
+DNS3=168.126.63.1
 
 # vi /etc/sysconfig/network-scripts/ifcfg-ens224
 TYPE=Ethernet
@@ -435,7 +436,7 @@ Oracle SQL, MySQL, MariaDB, Postgre SQL(표준 SQL을 이용하는 관계형 데
 
 > 서버
 repo = repository(directory 유사)의 상위 개념은 registry(저장소)
-# vi /etc/yum.repos.d/MariaDB.repo
+# vi /etc/yum.repos.d/MariaDB.repo --설치할때 설정파일
 [mariadb]
 name = MariaDB
 baseurl = http://yum.mariadb.org/10.4/centos7-amd64
@@ -468,13 +469,14 @@ quit
 # mysql -h ns.devplace.shop -u wpuser -p
 1234
 
-* FTP(파일 전송 프로토콜)는 컴퓨터 네트워크를 통해 파일을 전송하기 위한 표준 프로토콜 중 하나입니다. FTP는 클라이언트-서버 모델을 기반으로 하며, 클라이언트는 파일을 업로드하거나 다운로드하기 위해 서버에 접속합니다.
+* FTP: File Transfer Protocol(파일 전송 프로토콜)는 컴퓨터 네트워크를 통해 파일을 전송하기 위한 표준 프로토콜 중 하나입니다. FTP는 클라이언트-서버 모델을 기반으로 하며, 클라이언트는 파일을 업로드하거나 다운로드하기 위해 서버에 접속합니다.
 
 # yum -y install vsftpd
 # vi /etc/vsftpd/vsftpd.conf
 anonymous_enable=NO
 ascii_upload_enable=YES
 ascii_download_enable=YES
+#change root == chroot
 chroot_local_user=YES
 chroot_list_enable=YES
 chroot_list_file=/etc/vsftpd/chroot_list
@@ -487,7 +489,9 @@ use_localtime=YES
 seccomp_sandbox=NO
 
 # vi /etc/vsftpd/chroot_list
-cent
+ftp_user
+
+# adduser ftp_user
 
 # systemctl start vsftpd
 # systemctl enable vsftpd

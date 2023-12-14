@@ -1,0 +1,5 @@
+FQDN(Full Qualified Domain Name) : blog.naver.com
+
+NMS(Network Management System): 네트워크 자원 모너터링 시스템, Cacti, AWS CloudWatch 유사
+
+SNMP(Single Network Management Protocol) : NMS(ex: Cacti)가 다른 머신(Win10)을 모니터링 하기 위해 프로토콜이고 포트는 - UDP 161 포트 이용함
