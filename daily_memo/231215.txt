@@ -1,0 +1,2 @@
+SAN(Storage Area Network) : 스토리지들을  IP로 연결한 네트워크
+

@@ -1,0 +1,454 @@
+--- Private Cloud
+Openstack 싱글 노드 설치
+# setenforce 0
+# sed -i 's/^SELINUX=enforcing$/SELINUX=disabled/' /etc/selinux/config
+# systemctl disable --now NetworkManager
+# systemctl disable --now firewalld
+# systemctl enable --now network
+
+ggdG
+
+# vi /etc/sysconfig/network-scripts/ifcfg-ens32
+TYPE=Ethernet
+BOOTPROTO=none
+NAME=ens32
+DEVICE=ens32
+ONBOOT=yes
+IPADDR=172.25.0.142
+NETMASK=255.255.255.0
+GATEWAY=172.25.0.2
+DNS1=8.8.8.8
+DNS2=8.8.4.4
+
+# systemctl restart network
+# ping google.com
+
+# yum update -y
+# reboot
+
+# yum install -y centos-release-openstack-rocky
+# yum update -y
+# yum install -y openstack-packstack
+# packstack --gen-answer-file /root/answers.txt
+# vi /root/answers.txt
+sed -i 's/CONFIG_DEFAULT_PASSWORD=.*/CONFIG_DEFAULT_PASSWORD=Gustn0419!/' /root/answers.txt
+sed -i 's/CONFIG_KEYSTONE_ADMIN_PW=.*/CONFIG_KEYSTONE_ADMIN_PW=Gustn0419!/' /root/answers.txt
+sed -i 's/CONFIG_NTP_SERVERS=.*/CONFIG_NTP_SERVERS=0.kr.pool.ntp.org/' /root/answers.txt
+sed -i 's/CONFIG_HEAT_INSTALL=.*/CONFIG_HEAT_INSTALL=y/' /root/answers.txt
+sed -i 's/CONFIG_SWIFT_INSTALL=.*/CONFIG_SWIFT_INSTALL=y/' /root/answers.txt
+sed -i 's/CONFIG_CEILOMETER_INSTALL=.*/CONFIG_CEILOMETER_INSTALL=n/' /root/answers.txt
+sed -i 's/CONFIG_AODH_INSTALL=.*/CONFIG_AODH_INSTALL=n/' /root/answers.txt
+sed -i 's/CONFIG_NEUTRON_L2_AGENT=.*/CONFIG_NEUTRON_L2_AGENT=openvswitch/' /root/answers.txt
+sed -i 's/CONFIG_NEUTRON_ML2_TYPE_DRIVERS=.*/CONFIG_NEUTRON_ML2_TYPE_DRIVERS=vxlan,flat/' /root/answers.txt
+sed -i 's/CONFIG_NEUTRON_ML2_TENANT_NETWORK_TYPES=.*/CONFIG_NEUTRON_ML2_TENANT_NETWORK_TYPES=vxlan/' /root/answers.txt
+sed -i 's/CONFIG_NEUTRON_ML2_MECHANISM_DRIVERS=.*/CONFIG_NEUTRON_ML2_MECHANISM_DRIVERS=openvswitch/' /root/answers.txt
+sed -i 's/CONFIG_NEUTRON_OVS_BRIDGE_MAPPINGS=.*/CONFIG_NEUTRON_OVS_BRIDGE_MAPPINGS=extnet:br-ex/' /root/answers.txt
+sed -i 's/CONFIG_NEUTRON_OVS_BRIDGE_IFACES=.*/CONFIG_NEUTRON_OVS_BRIDGE_IFACES=br-ex:ens32/' /root/answers.txt
+sed -i 's/CONFIG_PROVISION_DEMO=.*/CONFIG_PROVISION_DEMO=n/' /root/answers.txt
+
+# packstack --answer-file /root/answers.txt
+11:51
+
+# yum -y install bash-completion
+
+# openstack complete | tee /etc/bash_completion.d/osc.bash_completion > /dev/null
+# exit
+
+# vi /etc/keystone/keystone.conf
+expiration=84600 # 변경
+
+# vi /usr/share/openstack-dashboard/openstack_dashboard/local/local_settings.py
+SESSION_TIMEOUT = 84600
+
+--- 볼륨 추가 명령어
+$ lsblk
+$ df -h
+$ sudo mkfs -t xfs /dev/vdb
+$ sudo mount /dev/vdb /mnt/
+$ df -h
+
+--- 오브젝트 스토리지 활용 및 웹서버 설치
+$ sudo yum install -y httpd wget
+$ wget http://192.168.0.58:8080/v1/AUTH_b945e8b7c1e84a628c1e3776c5323093/web-store/openstack.tar
+$ sudo tar -xvf openstack.tar -C /var/www/html/
+$ sudo systemctl enable --now httpd
+
+--- CLI 작업
+Project
+# source keystonerc_admin
+# openstack project create --domain Default --description "cli-project" cli-project
+
+User
+# openstack user create --domain Default --project cli-project --password-prompt cli-user
+# openstack role add --project cli-project --user cli-user _member_
+
+Flavor
+# openstack flavor create --vcpus 1 --ram 1024 --disk 8 m1.micro
+
+External Network
+# openstack network create --project cli-project --provider-network-type flat \
+--provider-physical-network extnet --external external-network
+# openstack subnet create --network external-network \
+--project cli-project --subnet-range 172.16.0.0/24 \
+--allocation-pool start=172.16.0.200,end=172.16.0.250 \
+--gateway 172.16.0.2 --no-dhcp external-subnet
+
+Add user
+# adduser cli-user
+# passwd cli-user
+
+Token
+# vi keystonerc_cli-user
+unset OS_SERVICE_TOKEN
+    export OS_USERNAME=cli-user
+    export OS_PASSWORD='Test1752!'
+    export OS_REGION_NAME=RegionOne
+    export OS_AUTH_URL=http://172.25.0.142:5000/v3
+    export PS1='[\u@\h \W(keystone_cli-user)]\$ '
+
+export OS_PROJECT_NAME=cli-project
+export OS_USER_DOMAIN_NAME=Default
+export OS_PROJECT_DOMAIN_NAME=Default
+export OS_IDENTITY_API_VERSION=3
+
+$ source keystonerc_cli-user
+
+Internal Network
+$ vi /etc/neutron/policy.json
+"create_network:provider:network_type": "role:admin or project_id:%(project_id)s",
+"create_floatingip:floating_ip_address": "role:admin or project_id:%(project_id)s",
+
+$ projectID=$(openstack project list | grep cli-project | awk '{print $2}')
+$ openstack network create --project $projectID --provider-network-type vxlan internal-network
+$ openstack subnet create --network internal-network --subnet-range 10.0.0.0/24 --gateway 10.0.0.1 \
+--dhcp --dns-nameserver 8.8.8.8 internal-subnet
+
+Router
+$ openstack router create router
+$ openstack router set --external-gateway external-network router
+$ openstack router add subnet router internal-subnet
+
+Floating IP
+$ openstack floating ip create external-network
+$ openstack floating ip create --floating-ip-address 172.16.0.222 external-network
+
+Security Group
+$ openstack security group create cli-sg-web
+$ openstack security group rule create --protocol icmp --ingress cli-sg-web
+$ openstack security group rule create --protocol tcp --dst-port 22:22 cli-sg-web
+$ openstack security group rule create --protocol tcp --dst-port 80:80 cli-sg-web
+$ openstack security group create cli-sg-db
+$ openstack security group rule create --protocol icmp --ingress cli-sg-db
+$ openstack security group rule create --protocol tcp --dst-port 22:22 cli-sg-db
+$ openstack security group rule create --protocol tcp --dst-port 3306:3306 cli-sg-db
+
+Image
+$ vi /etc/glance/policy.json
+"publicize_image": "",
+
+$ openstack image create "centos7" --file CentOS-7-x86_64-GenericCloud.qcow2 \
+--disk-format qcow2 --public
+$ openstack image create "ubuntu16" --file xenial-server-cloudimg-amd64-disk1.img \
+--disk-format qcow2 --public
+
+KeyPair
+$ ssh-keygen -t rsa
+$ openstack keypair create --public-key ~/.ssh/id_rsa.pub cli-key
+
+Server
+$ vi httpd.file
+#!/bin/bash
+yum install -y httpd
+systemctl enable --now httpd
+echo "<h1>webserver</h1>" > /var/www/html/index.html
+
+$ openstack image list
+$ openstack volume create --image f3346414-2182-4c44-9134-7058079996fe --size 8 --bootable web-root
+$ openstack volume list
+$ openstack server create --flavor m1.micro --network internal-network --security-group cli-sg-web \
+--volume de415905-b810-4755-9a30-ba4335235f05 --key-name cli-key --user-data httpd.file webserver
+$ openstack server list
+$ openstack floating ip list
+$ openstack server add floating ip webserver 172.16.0.222
+$ ssh -i .ssh/id_rsa centos@172.16.0.222
+
+Volume
+$ openstack volume create --size 8 web-add
+$ openstack volume list
+$ openstack server list
+$ openstack server add volume webserver web-add
+
+Container
+$ openstack container create test_container
+$ openstack container list
+$ openstack object create test_container test.txt
+$ openstack object list test_container
+$ openstack object save test_container test.txt
+$ openstack object delete test_container test.txt
+$ openstack object list test_container
+$ openstack container delete test_container
+$ openstack container list
+
+IaC
+$ openstack security group list
+$ openstack subnet list
+$ openstack flavor list
+$ openstack image list
+$ openstack keypair list
+$ vi sample-stack.yml
+heat_template_version: "2018-08-31"
+resources: 
+  Server_db: 
+    type: "OS::Nova::Server"
+    properties: 
+      security_groups: 
+        - "143205e2-7957-474c-9c5c-81687b909903"
+      networks: 
+        - subnet: "62839e1b-cdd0-4320-a2be-15c385c396c9"
+      name: "dbserver"
+      flavor: "f2ff8d3f-e864-42d2-a5d0-737ab01d3ef7"
+      image: "1a5a638c-508a-43a0-aa8f-daba8afae6bd"
+      availability_zone: "nova"
+      key_name: "cli-key"
+
+$ openstack stack create -t sample-stack.yml sample-stack
+$ openstack stack list
+$ openstack server list
+$ openstack floating ip create external-network
+$ openstack floating ip list
+$ ssh-keygen -R 172.16.0.211 (known host 재설정)
+$ ssh -i ~/.ssh/id_rsa centos@172.16.0.211
+... ? yes
+$ openstack port list
+$ vi floating-stack.yml
+heat_template_version: "2018-08-31"
+resources: 
+  FloatingIPAssociation_db: 
+    type: "OS::Neutron::FloatingIPAssociation"
+    properties: 
+      floatingip_id: "679f71ba-9574-48f5-b9f0-043cee9db43f"
+      port_id: "de1222f6-b368-487b-87f8-76faf4d8fc33"
+
+$ openstack stack create -t floating-stack.yml floating-stack
+$ openstack stack list
+$ openstack server list
+
+--- Public Cloud (AWS, Azure, GCP, NCP)
+my-vpc 10.0.0.0/16 (10.0.0.0 ~ 10.0.255.255 = 65536-2)
+
+public subnet
+my-pub-2a 10.0.0.0/20 (10.0.0.0 ~ 10.0.15.255 = 4096-2)
+my-pub-2b 10.0.16.0/20 (10.0.16.0 ~ 10.0.31.255 = 4096-2)
+my-pub-2c 10.0.32.0/20 (10.0.32.0 ~ 10.0.47.255 = 4096-2)
+my-pub-2d 10.0.48.0/20 (10.0.48.0 ~ 10.0.63.255 = 4096-2)
+
+private subnet
+my-pvt-2a 10.0.64.0/20 (10.0.64.0 ~ 10.0.79.255 = 4096-2)
+my-pvt-2b 10.0.80.0/20 (10.0.80.0 ~ 10.0.95.255 = 4096-2)
+my-pvt-2c 10.0.96.0/20 (10.0.96.0 ~ 10.0.111.255 = 4096-2)
+my-pvt-2d 10.0.112.0/20 (10.0.112.0 ~ 10.0.127.255 = 4096-2)
+
+#!/bin/bash
+yum install -y httpd
+systemctl enable --now httpd
+echo "<html>
+<head>
+    <title>My Website</title>
+</head>
+<body>
+    <h1>Hello, Website!</h1>
+    <p>This is a simple HTML page generated using echo command.</p>
+</body>
+</html>" > /var/www/html/index.html
+
+#!/bin/bash
+apt update
+apt install -y apache2
+echo "<html>
+<head>
+    <title>My Database</title>
+</head>
+<body>
+    <h1>Hello, Database!</h1>
+    <p>This is a simple HTML page generated using echo command.</p>
+</body>
+</html>" > /var/www/html/index.html
+
+<powershell>
+Install-WindowsFeature -Name Web-Server -IncludeManagementTools
+Set-Content -Path "C:\inetpub\wwwroot\Default.htm" -Value "<html>
+<head>
+    <title>My Windows</title>
+</head>
+<body>
+    <h1>Hello, Windows!</h1>
+    <p>This is a simple HTML page generated using echo command.</p>
+</body>
+</html>"
+</powershell>
+
+  ㅇ DNS 질의 종류
+     - 재귀적 (Recursive Queries, 재귀 질의)
+        . 질의된 도메인에 대해 즉각 응답하거나,대신에 다른 서버에게 질의한 결과로 응답하거나,
+          찾고 있는 정보가 없으면 없다는 에러 메시지를 보내줌
+           .. 가장 단순한 DNS 쿼리 유형
+
+     - 반복적 (Iterative Queries, 반복 질의)
+        . 질의된 도메인에 대해 응답하거나, 아니면 이 작업을 할 수 있는 다른 DNS 서버에
+          클라이언트를 연결 시켜 주는 작업
+           .. 자신이 관리하지 않는 알 수 없는 질의에 대해 응답 가능한 네임서버 목록 전달
+        . 결국, 클라이언트는 다수의 DNS 서버들에게 같은 질의를 반복할 수 있게됨
+
+// RDS 설정
+$ sudo mysql -h rds도메인 -u johnlee -p
+CREATE USER 'wpuser'@'%' IDENTIFIED BY 'wppass';
+CREATE DATABASE IF NOT EXISTS wordpress;
+GRANT ALL PRIVILEGES ON wordpress.* TO 'wpuser'@'%';
+quit
+
+// 웹서버 설치
+$ sudo yum install -y httpd php php-mysql php-gd php-mbstring wget unzip mysql
+$ wget https://ko.wordpress.org/wordpress-4.8.2-ko_KR.zip
+$ cd /var/www/html
+$ sudo unzip /home/ec2-user/wordpress-4.8.2-ko_KR.zip
+$ sudo chown -R apache:apache wordpress
+$ sudo systemctl restart httpd
+
+// aws cli 업데이트
+$ aws version
+$ curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+$ unzip awscliv2.zip
+$ sudo ./aws/install
+$ aws version
+$ aws configure
+$ aws s3 ls
+
+// VPN
+# dnf install -y libreswan
+# systemctl enable --now ipsec
+
+# vi /etc/sysctl.conf
+net.ipv4.ip_forward = 1
+net.ipv4.conf.default.rp_filter = 0
+net.ipv4.conf.default.accept_source_route = 0
+
+# sysctl -p
+
+# vi /etc/ipsec.d/aws.conf
+conn Tunnel1
+        authby=secret
+        auto=start
+        left=%defaultroute
+	leftid=1.2.3.4
+	right=5.6.7.8
+        type=tunnel
+        ikelifetime=8h
+        keylife=1h
+        phase2alg=aes128-sha1;modp1024
+        ike=aes128-sha1;modp1024
+        keyingtries=%forever
+        keyexchange=ike
+	leftsubnet=172.21.0.0/24
+	rightsubnet=10.0.0.0/16
+        dpddelay=10
+        dpdtimeout=30
+        dpdaction=restart_by_peer
+        overlapip=yes
+
+conn Tunnel2
+        authby=secret
+        auto=start
+        left=%defaultroute
+	leftid=1.2.3.4
+	right=1.7.5.2
+        type=tunnel
+        ikelifetime=8h
+        keylife=1h
+        phase2alg=aes128-sha1;modp1024
+        ike=aes128-sha1;modp1024
+        keyingtries=%forever
+        keyexchange=ike
+	leftsubnet=172.21.0.0/24
+	rightsubnet=10.0.0.0/16
+        dpddelay=10
+        dpdtimeout=30
+        dpdaction=restart_by_peer
+        overlapip=yes
+
+# vi /etc/ipsec.d/aws.secrets
+1.2.3.4 5.6.7.8: PSK "YcdHMlK3YL9B335TYSpR7EK2sSIcbDkw"
+1.2.3.4 1.7.5.2: PSK "Bnt165zQmVbbrdPKv86IJourtFsVYIM1"
+
+# systemctl restart ipsec
+
+// CMP
+- Minikube 설치
+# setenforce 0
+# sed -i 's/^SELINUX=enforcing$/SELINUX=disabled/' /etc/selinux/config
+# systemctl disable --now firewalld
+# curl -fsSL https://get.docker.com/ | sudo sh
+# systemctl enable --now docker
+# yum install -y conntrack git
+# curl -LO https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64
+# install minikube-linux-amd64 /usr/local/bin/minikube
+# minikube version
+# minikube start --driver=docker --memory=4096mb --force
+# minikube status
+
+- kubectl 설치
+# curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+# install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
+# yum install bash-completion -y
+# source <(kubectl completion bash)
+# echo "source <(kubectl completion bash)" >> ~/.bashrc
+# exit
+# kubectl version
+
+- helm 설치
+# curl -fsSL -o get_helm.sh https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3
+# chmod 700 get_helm.sh
+# yum install -y openssl git wget
+# ./get_helm.sh
+
+# helm repo add cloudforet https://cloudforet-io.github.io/charts 
+# helm repo update
+# helm search repo
+
+# kubectl create ns spaceone
+# kubectl create ns spaceone-plugin
+
+# wget https://raw.githubusercontent.com/cloudforet-io/charts/master/examples/rbac.yaml -O rbac.yaml
+# kubectl apply -f rbac.yaml -n spaceone-plugin
+
+# helm install cloudforet cloudforet/spaceone -n spaceone
+
+# kubectl get pod -n spaceone
+
+# wget https://raw.githubusercontent.com/cloudforet-io/charts/master/examples/initializer.yaml
+# helm install initializer cloudforet/spaceone-initializer -n spaceone -f initializer.yaml
+
+# kubectl get pods -n spaceone 
+
+# kubectl logs initialize-spaceone-gm58q-274ls -n spaceone
+
+# vi values.yaml
+console:
+  production_json:
+    CONSOLE_API:
+      ENDPOINT: http://172.16.0.176:8081  # http://ec2_public_ip:8081 for EC2 users
+    CONSOLE_API_V2:
+      ENDPOINT: http://172.16.0.176:8082  # http://ec2_public_ip:8082 for EC2 users
+
+global:
+  shared_conf:
+    TOKEN: 'eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJjYXQiOiJBUElfS0VZIiwidXNlcl90eXBlIjoiQVBJX1VTRVIiLCJkaWQiOiJkb21haW4tN2JmYjcwM2M0NWM1IiwiYXVkIjoic3lzdGVtX2FwaV9rZXkiLCJpYXQiOjE3MDQwMTg0MDcsImFwaV9rZXlfaWQiOiJhcGkta2V5LWRjMjJjNDE3MGM2MiIsInZlciI6IjIwMjAtMTItMDcifQ.vw8XwnRA6TquMndp0fbanmoRW8OR83ZG3uIXLBVAXSYPoi-WlFWsQP7BGlOsEe0lpAOgNSU1qOKNjGrlvCP0FC8fDTcW0JLKUxmZBjnLySb7N1ILtX-aSrzOc4gwr5e6yH2hu0Z3p744IHHx8Hy9ieuDdc_4qWblY7Bm1eQyRisDjmUUwQ_o-K4IinIuOAXnToe6dM9mEJWwPVyieRlYeZF1PVoEH_mvpLhWAw9c5gqBBgSmDtJFzhQO8p9WJj1nKeIaOKNuVof0BFM7YppuJa4JexwUrmlb1dqHQa801uGGq012Q3jGl62B4djBHSm39u4-b6m48D9Vz8Ugq4ABSw'   # Change the system token
+
+# helm upgrade cloudforet cloudforet/spaceone -n spaceone -f values.yaml
+
+# kubectl delete po -n spaceone -l app.kubernetes.io/instance=cloudforet
+
+# kubectl get pods -n spaceone
+
+# kubectl port-forward -n spaceone svc/console 8080:80 --address='0.0.0.0' &
+# kubectl port-forward -n spaceone svc/console-api 8081:80 --address='0.0.0.0' &
+# kubectl port-forward -n spaceone svc/console-api-v2-rest 8082:80 --address='0.0.0.0' &

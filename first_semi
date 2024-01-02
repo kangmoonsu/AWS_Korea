@@ -571,3 +571,18 @@ $ sudo iscsiadm -m node --targetname "iqn.2023.12.org.sesac.sys01" --portal "172
 10.25.0.102:/share /root/share nfs defaults 0 0
 // web2 의 ip주소
 - vCenter+vSAN
+
+-- cacti client(agent) 설치
+CentOS7
+# yum install -y net-snmp net-snmp-utils net-snmp-libs
+# vi /etc/snmp/snmpd.conf
+view    systemview    included   .1
+# systemctl enable --now  snmpd.service
+Ubuntu16
+$ sudo apt-get update
+$ sudo apt-get install -y snmp snmpd
+$ sudo vi /etc/snmp/snmpd.conf
+#agentAddress  udp:127.0.0.1:161
+view    systemonly    included   .1
+$ sudo systemctl restart snmpd
+* Device Template : net-snmp device

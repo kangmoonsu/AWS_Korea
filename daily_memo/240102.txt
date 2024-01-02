@@ -1,0 +1,29 @@
+Openstack Rocky(VMware)
+
+CPU : 6C
+RAM : 12,288MB
+SSD : 128GB(동적)
+NET : NAT
+IMG : CentOS7 64bit
+
+권한 규칙(rule) -> 권한 정책(policy) -> 역할(role)
+이노그리드(openstack)
+
+
+Openstack Core Service
+1. compute : cpu, ram(nova = EC2)
+2. network : router, switch, pvt, pub ip(neutron = VPC)
+3. storage : block(cinder = EBS)
+4. image : os(glance = AMI)
+5. identity : project, user, role(keystone = IAM)
+
+172.25.0.128 ~ 147, 172.25.0.200,172.25.0.220
+
+Openstack Optional Service
+webui console : dashboard(horizon = aws management console)
+file(manila = EFS), object(swift = S3)
+
+t2.micro(1c, 1gb, 8gb)
+
+*.ova, *.ovf(vbox, vmware, esxi)
+*.qcow2, *.img (openstack-kvm)
