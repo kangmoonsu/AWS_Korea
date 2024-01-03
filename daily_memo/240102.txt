@@ -22,7 +22,7 @@ Openstack Core Service
 Openstack Optional Service
 webui console : dashboard(horizon = aws management console)
 file(manila = EFS), object(swift = S3)
-
+orchestration : Iac; Infra as Code (heat = cloudformation)
 t2.micro(1c, 1gb, 8gb)
 
 *.ova, *.ovf(vbox, vmware, esxi)

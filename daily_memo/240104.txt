@@ -1,0 +1,14 @@
+heat_template_version: "2018-08-31"
+resources:
+  Server_web:
+    type: "OS::Nova::Server"
+    properties:
+      security_groups:
+        - "3eb8ea92-b1ad-4460-8aae-012a63ff0fd5"
+      networks:
+        - subnet: "aec139eb-ae85-49ab-ad60-4cb09ea22328"
+      name: webserver
+      flavor: "m1.micro"
+      image: "cb54225d-a272-4b1b-b3e9-07a78f9eecfb"
+      availability_zone: nova
+      key_name: "webui-key"
