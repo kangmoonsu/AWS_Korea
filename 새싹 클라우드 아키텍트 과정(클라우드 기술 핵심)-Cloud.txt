@@ -77,6 +77,8 @@ $ sudo systemctl enable --now httpd
 Project
 # source keystonerc_admin
 # openstack project create --domain Default --description "cli-project" cli-project
+# openstack project show cli-project
+# openstack project list
 
 User
 # openstack user create --domain Default --project cli-project --password-prompt cli-user
@@ -89,9 +91,9 @@ External Network
 # openstack network create --project cli-project --provider-network-type flat \
 --provider-physical-network extnet --external external-network
 # openstack subnet create --network external-network \
---project cli-project --subnet-range 172.16.0.0/24 \
---allocation-pool start=172.16.0.200,end=172.16.0.250 \
---gateway 172.16.0.2 --no-dhcp external-subnet
+--project cli-project --subnet-range 172.25.0.0/24 \
+--allocation-pool start=172.25.0.200,end=172.25.0.220 \
+--gateway 172.25.0.2 --no-dhcp external-subnet
 
 Add user
 # adduser cli-user
@@ -101,7 +103,7 @@ Token
 # vi keystonerc_cli-user
 unset OS_SERVICE_TOKEN
     export OS_USERNAME=cli-user
-    export OS_PASSWORD='Test1752!'
+    export OS_PASSWORD='gustn0419'
     export OS_REGION_NAME=RegionOne
     export OS_AUTH_URL=http://172.25.0.142:5000/v3
     export PS1='[\u@\h \W(keystone_cli-user)]\$ '
@@ -112,6 +114,7 @@ export OS_PROJECT_DOMAIN_NAME=Default
 export OS_IDENTITY_API_VERSION=3
 
 $ source keystonerc_cli-user
+ . keystonerc_cli-user
 
 Internal Network
 $ vi /etc/neutron/policy.json
@@ -120,8 +123,8 @@ $ vi /etc/neutron/policy.json
 
 $ projectID=$(openstack project list | grep cli-project | awk '{print $2}')
 $ openstack network create --project $projectID --provider-network-type vxlan internal-network
-$ openstack subnet create --network internal-network --subnet-range 10.0.0.0/24 --gateway 10.0.0.1 \
---dhcp --dns-nameserver 8.8.8.8 internal-subnet
+$ openstack subnet create --network internal-network --subnet-range 10.9.10.0/24 --gateway 10.9.10.1 \
+--dhcp --dns-nameserver 8.8.8.8 --dns-nameserver 8.8.4.4 internal-subnet
 
 Router
 $ openstack router create router
@@ -130,7 +133,7 @@ $ openstack router add subnet router internal-subnet
 
 Floating IP
 $ openstack floating ip create external-network
-$ openstack floating ip create --floating-ip-address 172.16.0.222 external-network
+$ openstack floating ip create --floating-ip-address 172.25.0.210 external-network
 
 Security Group
 $ openstack security group create cli-sg-web
@@ -163,14 +166,14 @@ systemctl enable --now httpd
 echo "<h1>webserver</h1>" > /var/www/html/index.html
 
 $ openstack image list
-$ openstack volume create --image f3346414-2182-4c44-9134-7058079996fe --size 8 --bootable web-root
+$ openstack volume create --image centos7 --size 8 --bootable web-root
 $ openstack volume list
-$ openstack server create --flavor m1.micro --network internal-network --security-group cli-sg-web \
---volume de415905-b810-4755-9a30-ba4335235f05 --key-name cli-key --user-data httpd.file webserver
+$ openstack server create --flavor mi.micro --network internal-network --security-group cli-sg-web \
+--volume 0975ae4d-a594-4102-b134-542c03904ff6 --key-name cli-key --user-data httpd.file webserver
 $ openstack server list
 $ openstack floating ip list
-$ openstack server add floating ip webserver 172.16.0.222
-$ ssh -i .ssh/id_rsa centos@172.16.0.222
+$ openstack server add floating ip webserver 172.25.0.210
+$ ssh -i .ssh/id_rsa centos@172.25.0.210
 
 Volume
 $ openstack volume create --size 8 web-add
@@ -181,13 +184,17 @@ $ openstack server add volume webserver web-add
 Container
 $ openstack container create test_container
 $ openstack container list
-$ openstack object create test_container test.txt
+$ openstack object create test_container aws.tar
 $ openstack object list test_container
-$ openstack object save test_container test.txt
-$ openstack object delete test_container test.txt
+$ openstack object save test_container aws.tar
+$ openstack object delete test_container aws.tar
 $ openstack object list test_container
 $ openstack container delete test_container
 $ openstack container list
+
+http://172.25.0.142:8080/AUTH_8b49a0e3595d4d39b5b9f27eccad4c41/test_container/aws.tar
+
+swift post test_container --read-acl ".r:*,.rlistings"
 
 IaC
 $ openstack security group list
@@ -197,17 +204,17 @@ $ openstack image list
 $ openstack keypair list
 $ vi sample-stack.yml
 heat_template_version: "2018-08-31"
-resources: 
-  Server_db: 
+resources:
+  Server_db:
     type: "OS::Nova::Server"
-    properties: 
-      security_groups: 
-        - "143205e2-7957-474c-9c5c-81687b909903"
-      networks: 
-        - subnet: "62839e1b-cdd0-4320-a2be-15c385c396c9"
+    properties:
+      security_groups:
+        - "f71a00da-0b42-4601-b985-3cbc76b13f7e"
+      networks:
+        - subnet: "4d49c63b-c84b-498d-aba3-a403b4a44d7e"
       name: "dbserver"
-      flavor: "f2ff8d3f-e864-42d2-a5d0-737ab01d3ef7"
-      image: "1a5a638c-508a-43a0-aa8f-daba8afae6bd"
+      flavor: "a28d2358-cb45-40c8-8039-38bccf7d60a9"
+      image: "8ecf56c0-d8c1-48b1-9f95-74ce87eedadb"
       availability_zone: "nova"
       key_name: "cli-key"
 
@@ -216,8 +223,8 @@ $ openstack stack list
 $ openstack server list
 $ openstack floating ip create external-network
 $ openstack floating ip list
-$ ssh-keygen -R 172.16.0.211 (known host 재설정)
-$ ssh -i ~/.ssh/id_rsa centos@172.16.0.211
+$ ssh-keygen -R 172.25.0.211 (known host 재설정)
+$ ssh -i ~/.ssh/id_rsa centos@172.25.0.211
 ... ? yes
 $ openstack port list
 $ vi floating-stack.yml
@@ -226,8 +233,8 @@ resources:
   FloatingIPAssociation_db: 
     type: "OS::Neutron::FloatingIPAssociation"
     properties: 
-      floatingip_id: "679f71ba-9574-48f5-b9f0-043cee9db43f"
-      port_id: "de1222f6-b368-487b-87f8-76faf4d8fc33"
+      floatingip_id: "94b38516-f2c8-4f3b-840d-87aeafaf2e9b"
+      port_id: "a0326c43-36ee-4d10-933d-290cbf415b3a"
 
 $ openstack stack create -t floating-stack.yml floating-stack
 $ openstack stack list
