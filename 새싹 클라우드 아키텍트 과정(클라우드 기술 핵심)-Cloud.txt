@@ -241,19 +241,21 @@ $ openstack stack list
 $ openstack server list
 
 --- Public Cloud (AWS, Azure, GCP, NCP)
-my-vpc 10.0.0.0/16 (10.0.0.0 ~ 10.0.255.255 = 65536-2)
+my-vpc 10.10.0.0/16 (10.10.0.0 ~ 10.10.255.255 = 65536-2)
 
 public subnet
-my-pub-2a 10.0.0.0/20 (10.0.0.0 ~ 10.0.15.255 = 4096-2)
-my-pub-2b 10.0.16.0/20 (10.0.16.0 ~ 10.0.31.255 = 4096-2)
-my-pub-2c 10.0.32.0/20 (10.0.32.0 ~ 10.0.47.255 = 4096-2)
-my-pub-2d 10.0.48.0/20 (10.0.48.0 ~ 10.0.63.255 = 4096-2)
+my-pub-2a 10.10.0.0/20 (10.10.0.0 ~ 10.10.15.255 = 4096-2)
+my-pub-2b 10.10.16.0/20 (10.10.16.0 ~ 10.10.31.255 = 4096-2)
+my-pub-2c 10.10.32.0/20 (10.10.32.0 ~ 10.10.47.255 = 4096-2)
+my-pub-2d 10.10.48.0/20 (10.10.48.0 ~ 10.10.63.255 = 4096-2)
 
 private subnet
-my-pvt-2a 10.0.64.0/20 (10.0.64.0 ~ 10.0.79.255 = 4096-2)
-my-pvt-2b 10.0.80.0/20 (10.0.80.0 ~ 10.0.95.255 = 4096-2)
-my-pvt-2c 10.0.96.0/20 (10.0.96.0 ~ 10.0.111.255 = 4096-2)
-my-pvt-2d 10.0.112.0/20 (10.0.112.0 ~ 10.0.127.255 = 4096-2)
+my-pvt-2a 10.10.64.0/20 (10.10.64.0 ~ 10.10.79.255 = 4096-2)
+my-pvt-2b 10.10.80.0/20 (10.10.80.0 ~ 10.10.95.255 = 4096-2)
+my-pvt-2c 10.10.96.0/20 (10.10.96.0 ~ 10.10.111.255 = 4096-2)
+my-pvt-2d 10.10.112.0/20 (10.10.112.0 ~ 10.10.127.255 = 4096-2)
+
+my-igw
 
 #!/bin/bash
 yum install -y httpd
@@ -356,7 +358,7 @@ conn Tunnel1
         keyingtries=%forever
         keyexchange=ike
 	leftsubnet=172.21.0.0/24
-	rightsubnet=10.0.0.0/16
+	rightsubnet=10.10.0.0/16
         dpddelay=10
         dpdtimeout=30
         dpdaction=restart_by_peer
@@ -376,7 +378,7 @@ conn Tunnel2
         keyingtries=%forever
         keyexchange=ike
 	leftsubnet=172.21.0.0/24
-	rightsubnet=10.0.0.0/16
+	rightsubnet=10.10.0.0/16
         dpddelay=10
         dpdtimeout=30
         dpdaction=restart_by_peer
